@@ -21,12 +21,12 @@ CFILES= publishApp.c
 
 SRCS= ${HFILES} ${CFILES}
 
-all: publishApp
+all: mqttapp
 
 clean:
-	-rm -rf publishApp publishApp.o
+	-rm -rf mqttapp mqttapp.o
 
-publishApp: publishApp.o
+mqttapp: mqttapp.o
 	$(CC) -o $@ $< $(LIB_DIRS)
 
 .c.o: ${SRCS}
