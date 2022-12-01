@@ -15,7 +15,7 @@
 */
 
 #include <string.h>
-//#include "MQTTClient.h"
+#include "MQTTClient.h"
 #include "pubsub_opts.h"
 #include <stdlib.h>
 #include <unistd.h>
