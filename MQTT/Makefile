@@ -37,12 +37,12 @@
 CC = gcc
 CFLAGS=-I.
 DEPS = MQTTAsync.h MQTTClientPersistence.h MQTTProperties.h MQTTClient.h MQTTReasonCodes.h MQTTSub$
-OBJ = publishApp.o
+OBJ = mqttapp.o
 LIBS= -lpaho-mqtt3c
 
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: publishApp.o
+all: mqttapp.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
