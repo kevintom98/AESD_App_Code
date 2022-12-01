@@ -1,42 +1,35 @@
-SRCS = $(wildcard *.c)
-#SRCS = subscribeApp.c
-OBJS = $(SRCS:.c=.o)
+# CC=$(CROSS_COMPILE)gcc
+# CFLAGS=-Wall
 
-ifeq ($(CC),)
-	CC = $(CROSS_COMPILE)gcc
-endif
+# all: aesdsocket
+# aesdsocket: aesdsocket.o
+# aesdsocket.o: aesdsocket.c queue.h
 
-ifeq ($(CFLAGS),)
-	CFLAGS = -g -Wall -Werror
-endif 
+# clean:
+# rm -f aesdsocket aesdsocket.o
+# run: aesdsocket
+# ./aesdsocket
 
-ifeq ($(LDFLAGS),)
-	LDFLAGS = -lpaho-mqtt3cs
-endif 
 
-TARGET_BUILD?=0
-ifeq ($(TARGET_BUILD),1)
-	CUSTOMFLAGS = -DTARGET_BUILD
-endif
+INCLUDE_DIRS =
+LIB_DIRS = -lpaho-mqtt3cs
+CC=$(CROSS_COMPILE)gcc
 
-TARGET = mqttapp 
-all: $(TARGET)
-default: $(TARGET)
 
-$(TARGET): $(SRCS) 
-	$(CC) $(CFLAGS) $^ -o $@ $(INCLUDES) $(LDFLAGS) $(CUSTOMFLAGS)
+HFILES= pubsub_opts.h
+CFILES= publishApp.c
 
-.PHONY: clean
+SRCS= ${HFILES} ${CFILES}
+
+all: publishApp
+
 clean:
-	rm -f $(OBJS) $(TARGET)
-	rm -f valgrind*
+	-rm -rf publishApp publishApp.o
 
-debug:
-	make all
-	rm -f valgrind*
-	valgrind --leak-check=full \
-         --show-leak-kinds=all \
-         --track-origins=yes \
-         --verbose \
-         --log-file=valgrind-out.txt \
-         ./$(TARGET)
+mqttapp: publishApp.o
+	$(CC) -o $@ $< $(LIB_DIRS)
+
+.c.o: ${SRCS}
+	$(CC) -c -g $^
+
+
