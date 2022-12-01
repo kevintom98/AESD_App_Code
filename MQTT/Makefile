@@ -11,38 +11,24 @@
 # ./aesdsocket
 
 
-#INCLUDE_DIRS =
-#LIB_DIRS = -lpaho-mqtt3cs -lpaho-mqtt3a -lpaho-mqtt3as -lpaho-mqtt3c
-#CC=$(CROSS_COMPILE)gcc
+INCLUDE_DIRS =
+LIB_DIRS = -lpaho-mqtt3cs
+CC=$(CROSS_COMPILE)gcc
 
 
-#HFILES= pubsub_opts.h
-#CFILES= publishApp.c
+HFILES= pubsub_opts.h
+CFILES= publishApp.c
 
-#SRCS= ${HFILES} ${CFILES}
+SRCS= ${HFILES} ${CFILES}
 
-#all: publishApp
+all: publishApp
 
-#clean:
-#	-rm -rf publishApp publishApp.o
+clean:
+	-rm -rf publishApp publishApp.o
 
-#mqttapp: publishApp.o
-#	$(CC) -o $@ $< $(LIB_DIRS)
+publishApp: publishApp.o
+	$(CC) -o $@ $< $(LIB_DIRS)
 
-#.c.o: ${SRCS}
-#	$(CC) -c -g $^
+.c.o: ${SRCS}
+	$(CC) -c -g $^
 
-
-
-CC = gcc
-CFLAGS=-I.
-DEPS = MQTTAsync.h MQTTClientPersistence.h MQTTProperties.h MQTTClient.h MQTTReasonCodes.h MQTTSub$
-OBJ = mqttapp.o
-LIBS= -lpaho-mqtt3c
-
-
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
-
-all: mqttapp.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
