@@ -42,7 +42,7 @@ LIBS= -lpaho-mqtt3c
 
 
 %.o: %.c $(DEPS)
-        $(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 mainmake: publishApp.o
-        $(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
