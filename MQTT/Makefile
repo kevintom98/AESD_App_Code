@@ -12,7 +12,7 @@
 
 
 INCLUDE_DIRS =
-LIB_DIRS = -lpaho-mqtt3cs
+LIB_DIRS = -lpaho-mqtt3cs -lpaho-mqtt3a -lpaho-mqtt3as -lpaho-mqtt3c
 CC=$(CROSS_COMPILE)gcc
 
 
