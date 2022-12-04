@@ -1,17 +1,4 @@
-# CC=$(CROSS_COMPILE)gcc
-# CFLAGS=-Wall
-
-# all: aesdsocket
-# aesdsocket: aesdsocket.o
-# aesdsocket.o: aesdsocket.c queue.h
-
-# clean:
-# rm -f aesdsocket aesdsocket.o
-# run: aesdsocket
-# ./aesdsocket
-
-
-NCLUDE_DIRS =
+INCLUDE_DIRS =
 LIB_DIRS = -lpaho-mqtt3cs -lpaho-mqtt3a -lpaho-mqtt3as -lpaho-mqtt3c
 CC=$(CROSS_COMPILE)gcc
 
