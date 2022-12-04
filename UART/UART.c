@@ -14,7 +14,7 @@ int main()
   if(tcgetattr(serial_port, &tty) != 0) 
   {
       printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-      return 1;
+      goto exit_uart;
   }  
   
   tty.c_cflag &= ~PARENB;
@@ -35,35 +35,38 @@ int main()
   tty.c_cc[VTIME] = 10;
   tty.c_cc[VMIN] = 0;  
   
-  cfsetispeed(&tty, B9600);
-  cfsetospeed(&tty, B9600);  
+  cfsetispeed(&tty, B115200);
+  cfsetospeed(&tty, B115200);  
   
   if (tcsetattr(serial_port, TCSANOW, &tty) != 0) 
   {
       printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-      return 1;
+      goto exit_uart;
   }  
   
-  unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
 
+  printf("\n\rREADING DATA\n\r");
+  printf("============\n\r");
 
-    while(1)
-    {
-        write(serial_port, "Hello, world!", sizeof(msg));  
-        char read_buf [256];  
-        memset(&read_buf, '\0', sizeof(read_buf));  
-        int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));  
-        
-        if (num_bytes < 0) 
-        {
-            printf("Error reading: %s", strerror(errno));
-            return 1;
-        }  
-        
-        printf("Read %i bytes. Received message: %s", num_bytes, read_buf); 
-
-    } 
   
+  while(1)
+  {
+      //write(serial_port, "Hello, world!", sizeof(msg));  
+      char read_buf [256];  
+      memset(&read_buf, '\0', sizeof(read_buf));  
+      int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));  
+      
+      if (num_bytes < 0) 
+      {
+          printf("Error reading: %s", strerror(errno));
+          goto exit_uart;
+      }  
+      
+      //printf("Read %i bytes. Received message: %s", num_bytes, read_buf); 
+      printf("\n\r%s",read_buf);
+  } 
+  
+  exit_uart:
   close(serial_port);
   return 0;
 }
