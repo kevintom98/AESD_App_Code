@@ -6,9 +6,13 @@
 #include <termios.h>
 #include <unistd.h>
 
-int main() 
+int main(int argc, char *argv[]) 
 {
-  int serial_port = open("/dev/ttyAMA0", O_RDWR);  
+
+  if(argc != 2)
+    return 1;
+
+  int serial_port = open(argv[1], O_RDWR);  
   struct termios tty;  
   
   if(tcgetattr(serial_port, &tty) != 0) 
@@ -48,7 +52,7 @@ int main()
   printf("\n\rREADING DATA\n\r");
   printf("============\n\r");
 
-  
+
   while(1)
   {
       //write(serial_port, "Hello, world!", sizeof(msg));  
@@ -56,7 +60,7 @@ int main()
       memset(&read_buf, '\0', sizeof(read_buf));  
       int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));  
       
-      if (num_bytes < 0) 
+      if (num_bytes < 1) 
       {
           printf("Error reading: %s", strerror(errno));
           goto exit_uart;
