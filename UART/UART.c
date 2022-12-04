@@ -6,7 +6,7 @@
 #include <termios.h>
 #include <unistd.h>
 
-int main(int argc, char *argv[]) 
+int main( int argc, char *argv[]) 
 {
 
   if(argc != 2)
@@ -14,13 +14,13 @@ int main(int argc, char *argv[])
 
   int serial_port = open(argv[1], O_RDWR);  
   struct termios tty;  
-  
+
   if(tcgetattr(serial_port, &tty) != 0) 
   {
       printf("Error %i from tcgetattr: %s\n", errno, strerror(errno));
-      goto exit_uart;
+      return 1;
   }  
-  
+
   tty.c_cflag &= ~PARENB;
   tty.c_cflag &= ~CSTOPB;
   tty.c_cflag &= ~CSIZE;
@@ -38,39 +38,33 @@ int main(int argc, char *argv[])
   tty.c_oflag &= ~ONLCR;  
   tty.c_cc[VTIME] = 10;
   tty.c_cc[VMIN] = 0;  
-  
-  cfsetispeed(&tty, B115200);
-  cfsetospeed(&tty, B115200);  
-  
+
+  cfsetispeed(&tty, B9600);
+  cfsetospeed(&tty, B9600);  
+
   if (tcsetattr(serial_port, TCSANOW, &tty) != 0) 
   {
       printf("Error %i from tcsetattr: %s\n", errno, strerror(errno));
-      goto exit_uart;
+      return 1;
   }  
-  
 
-  printf("\n\rREADING DATA\n\r");
-  printf("============\n\r");
+  //unsigned char msg[] = { 'H', 'e', 'l', 'l', 'o', '\r' };
 
 
-  while(1)
-  {
-      //write(serial_port, "Hello, world!", sizeof(msg));  
-      char read_buf [256];  
-      memset(&read_buf, '\0', sizeof(read_buf));  
-      int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));  
-      
-      if (num_bytes < 1) 
-      {
-          printf("Error reading: %s", strerror(errno));
-          goto exit_uart;
-      }  
-      
-      //printf("Read %i bytes. Received message: %s", num_bytes, read_buf); 
-      printf("\n\r%s",read_buf);
-  } 
-  
-  exit_uart:
+    while(1)
+    {
+        //write(serial_port, "Hello, world!", sizeof(msg));  
+        char read_buf [256];  
+        memset(&read_buf, '\0', sizeof(read_buf));  
+        int num_bytes = read(serial_port, &read_buf, sizeof(read_buf));  
+        if (num_bytes < 0) 
+        {
+            printf("Error reading: %s", strerror(errno));
+            return 1;
+        }  
+        printf("%s", read_buf); 
+    } 
+
   close(serial_port);
   return 0;
 }
