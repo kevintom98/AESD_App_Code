@@ -3,8 +3,8 @@ LIB_DIRS =
 CC=$(CROSS_COMPILE)gcc
 
 
-HFILES= lwgps.h lwgps_opt.h
-CFILES= UART.c lwgps.c
+HFILES= UART.h
+CFILES= UART.c 
 SRCS= ${HFILES} ${CFILES} ${INCLUDE_DIRS}
 all: UART
 clean:

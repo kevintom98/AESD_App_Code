@@ -1,3 +1,20 @@
+/****************************************************************************************************
+  File name   : UART.c
+  Created     : 04-Dec-2022
+  Author      : Kevin Tom
+                MS-ECEE-ESE
+                CU Boulder, CO
+  Email       : keto9919@colorado.edu
+  Description : 
+  Reference   : parsing NMEA sentences
+                //https://www.beyondlogic.org/ansi-c-basic-lightweight-nmea-parser-for-gps/
+  How to compile the script
+  -------------------------
+  1. Open terminal in the same directory as this file.
+  2. Type "make" to compile the file using gcc compiler.
+  3. Run "./UART <GPS_PORT>" command to run the code.
+  4. For crosscompiling do "make clean" to clear the already geenrated executables (if any).
+******************************************************************************************************/
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -6,102 +23,98 @@
 #include <termios.h>
 #include <time.h>
 #include <stdlib.h>
-
-int hex2int(char *c);
-int checksum_valid(char *string);
-int parse_comma_delimited_str(char *string, char **fields, int max_fields);
-int debug_print_fields(int numfields, char **fields);
-int OpenGPSPort(const char *devname);
-int SetTime(char *date, char *time);
-
-
+#include "UART.h"
 
 int main(int argc, char **argv)
 {
-	int fd;
+	int fd = 0;
 	char buffer[255];
-	int nbytes;
-	int i;
-	char *field[20];
+	int nbytes = 0;
+	int i =0, baud_rate = 0;
+	char *field[20], *p;
+  float lat =0.0,lon=0.0, speed = 0;
 
-  if(argc != 2)
+  if(argc != 3)
   {
     printf("\n\rNeed the follwing arguments:");
-    printf("\n\r[1] Serial port to which GPS is connected to (eg :/dev/ttyUSB0)");
+    printf("\n\r[1] Serial port to which GPS is connected (eg :/dev/ttyUSB0)");
+    printf("\n\r[2] Baud rate to connect (eg : 9600)");
+    return 1;
   }
 
-	if ((fd = OpenGPSPort(argv[1])) < 0)
+  //Converting command line argument to integer
+  baud_rate = strtol(argv[2], &p, 10);
+
+
+  //Opening GPS port
+	if ( (fd = OpenGPSPort(argv[1], baud_rate)) < 0)
 	{
 		printf("Cannot open GPS port\r\n.");
-		return 0;
+		return 1;
 	}
+
+
+
 
 	do 
   {
 		if ((nbytes = read(fd, &buffer, sizeof(buffer))) < 0) 
     {
 			perror("Read");
-			return 1;
+			goto close_port;
 		} 
     else 
     {
 			if (nbytes == 0) 
       {
-				printf("No communication from GPS module\r\n");
+				printf("No communication from GPS module, waiting for some time and trying again\r\n");
 				sleep(1);
 			} 
       else 
       {
+        //printf("RAW Data: %s\r\n", buffer);
 				buffer[nbytes - 1] = '\0';
-				if (checksum_valid(buffer)) 
-        {
-					if ((strncmp(buffer, "$GP", 3) == 0) | (strncmp(buffer, "$GN", 3) == 0)) 
-            {
-              if (strncmp(&buffer[3], "GGA", 3) == 0) 
-              {
-                i = parse_comma_delimited_str(buffer, field, 20);
-                //debug_print_fields(i,field);
-                printf("UTC Time  :%s\r\n",field[1]);
-                printf("Latitude  :%s\r\n",field[2]);
-                printf("Longitude :%s\r\n",field[4]);
-                printf("Altitude  :%s\r\n",field[9]);
-                printf("Satellites:%s\r\n",field[7]);
-              }
-              if (strncmp(&buffer[3], "RMC", 3) == 0) 
-              {
-                i = parse_comma_delimited_str(buffer, field, 20);
-                //debug_print_fields(i,field);
-                printf("Speed     :%s\r\n",field[7]);
-                //printf("UTC Time  :%s\r\n",field[1]);
-                //printf("Date      :%s\r\n",field[9]);
 
-                SetTime(field[9],field[1]);
-              }
-					  }
-				}
+        //Checking talker ID
+        //Reference : https://cdn.sparkfun.com/assets/0/b/0/f/7/u-blox8-M8_ReceiverDescrProtSpec__UBX-13003221__Public.pdf
+        //Page 104
+        if ((strncmp(buffer, "$GP", 3) == 0) | (strncmp(buffer, "$GN", 3) == 0)) 
+          {
+            if (strncmp(&buffer[3], "GGA", 3) == 0) 
+            {
+              printf("RAW Data: %s\r\n", buffer);
+              i = parse_comma_delimited_str(buffer, field, 20);
+              lat = GpsToDecimalDegrees(field[2],*field[3]);
+              lon = GpsToDecimalDegrees(field[4],*field[5]);
+              
+    
+
+              printf("UTC Time  :%s\r\n",field[1]);
+              printf("Latitude  :%f\r\n",lat);
+              printf("Longitude :%f\r\n",lon);
+              printf("Altitude  :%sm\r\n",field[9]);
+              printf("Satellites:%s\r\n",field[7]);
+            }
+            if (strncmp(&buffer[3], "RMC", 3) == 0) 
+            {
+              i = parse_comma_delimited_str(buffer, field, 20);
+              convert_time(field[9],field[1]);
+            }
+          }
 			}
 		}
 	}while(1);
 
+
+  close_port:
 	if (close(fd) < 0) 
   {
 		perror("Close");
 		return 1;
 	}
-
 	return 0;
 }
 
-
-
-int debug_print_fields(int numfields, char **fields)
-{
-	printf("Parsed %d fields\r\n",numfields);
-
-	for (int i = 0; i <= numfields; i++) {
-		printf("Field %02d: [%s]\r\n",i,fields[i]);
-	}
-}
 
 int hexchar2int(char c)
 {
@@ -125,33 +138,8 @@ int hex2int(char *c)
 	return value;
 }
 
-int checksum_valid(char *string)
-{
-	char *checksum_str;
-	int checksum;
-	unsigned char calculated_checksum = 0;
 
-	// Checksum is postcede by *
-	checksum_str = strchr(string, '*');
-	if (checksum_str != NULL){
-		// Remove checksum from string
-		*checksum_str = '\0';
-		// Calculate checksum, starting after $ (i = 1)
-		for (int i = 1; i < strlen(string); i++) {
-			calculated_checksum = calculated_checksum ^ string[i];
-		}
-		checksum = hex2int((char *)checksum_str+1);
-		//printf("Checksum Str [%s], Checksum %02X, Calculated Checksum %02X\r\n",(char *)checksum_str+1, checksum, calculated_checksum);
-		if (checksum == calculated_checksum) {
-			//printf("Checksum OK");
-			return 1;
-		}
-	} else {
-		//printf("Error: Checksum missing or NULL NMEA message\r\n");
-		return 0;
-	}
-	return 0;
-}
+
 
 int parse_comma_delimited_str(char *string, char **fields, int max_fields)
 {
@@ -166,7 +154,10 @@ int parse_comma_delimited_str(char *string, char **fields, int max_fields)
 	return --i;
 }
 
-int SetTime(char *date, char *time)
+
+
+
+int convert_time(char *date, char *time)
 {
 	struct timespec ts;
 	struct tm gpstime;
@@ -174,9 +165,6 @@ int SetTime(char *date, char *time)
 	char tempbuf[2];
 	int ret;
 
-	printf("GPS    UTC_Date %s, UTC_Time %s\r\n",date, time);
-	// GPS date has format of ddmmyy
-	// GPS time has format of hhmmss.ss
 
 	if ((strlen(date) != 6) | (strlen(time) != 9)) {
 		printf("No date or time fix. Exiting\r\n");
@@ -213,39 +201,32 @@ int SetTime(char *date, char *time)
 	tempbuf[2] = '\0';
 	gpstime.tm_sec = atoi(tempbuf);
 
-	printf("Converted UTC_Date %02d%02d%02d, UTC_Time %02d%02d%02d.00\r\n",gpstime.tm_mday,(gpstime.tm_mon)+1,(gpstime.tm_year)%100, gpstime.tm_hour, gpstime.tm_min, gpstime.tm_sec);
-
-	ts.tv_sec = mktime(&gpstime);
-	// Apply GMT offset to correct for timezone
-	ts.tv_sec += gpstime.tm_gmtoff;
-
-	printf("Number of seconds since Epoch %ld\r\n",ts.tv_sec);
-
-	ts.tv_nsec = 0;
-	ret = clock_settime(CLOCK_REALTIME, &ts);
-	if (ret)
-		perror("Set Clock");
-
-	//clock_gettime(CLOCK_REALTIME, &ts);
-	//printf("Number of seconds since Epoch %ld\r\n",ts.tv_sec);
-	//gpstime = gmtime(&ts.tv_sec);
-	//printf("System UTC_Date %02d%02d%02d, ",gpstime->tm_mday,(gpstime->tm_mon)+1,(gpstime->tm_year)%100);
-	//printf("UTC_Time %02d%02d%02d.00\r\n", gpstime->tm_hour, gpstime->tm_min, gpstime->tm_sec);
-	printf("\r\n");
+	printf("UTC_Date  :  %02d/%02d/%02d \r\nUTC_Time  : %02d:%02d:%02d\r\n",gpstime.tm_mday,(gpstime.tm_mon)+1,(gpstime.tm_year)%100, gpstime.tm_hour, gpstime.tm_min, gpstime.tm_sec);
 }
 
 
 
 
 
-int OpenGPSPort(const char *devname)
+int OpenGPSPort(const char *devname, int baud_rate)
 {
+
+  if(baud_rate != 9600)
+  {
+    printf("\n\rBaud rate not supported");
+    return -1;
+  }
+
+  //File descriptor
 	int fd;
+
+  //Serial port strucutre
 	struct termios options;
 
-	if ((fd = open(devname, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) {
+	if ((fd = open(devname, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) 
+  {
 		perror("Open");
-		return 1;
+		return -1;
 	}
 
 	// Set to blocking
@@ -255,9 +236,14 @@ int OpenGPSPort(const char *devname)
 	tcgetattr(fd, &options);
 
 
-	// Set input and output baud rates
-	cfsetispeed(&options, B9600);
-	cfsetospeed(&options, B9600);
+  //Current supported baudrate
+  if (baud_rate == 9600)
+  {
+    	// Set input and output baud rates
+      cfsetispeed(&options, B9600);
+      cfsetospeed(&options, B9600);
+  }
+
 
 	// Set input modes
 	options.c_iflag |= ICRNL;
@@ -274,4 +260,22 @@ int OpenGPSPort(const char *devname)
 	tcsetattr(fd, TCSAFLUSH, &options);
 
 	return(fd);
+}
+
+
+float GpsToDecimalDegrees(const char* nmeaPos, char quadrant)
+{
+  float v= 0;
+  if(strlen(nmeaPos)>5)
+  {
+    char integerPart[3+1];
+    int digitCount= (nmeaPos[4]=='.' ? 2 : 3);
+    memcpy(integerPart, nmeaPos, digitCount);
+    integerPart[digitCount]= 0;
+    nmeaPos+= digitCount;
+    v= atoi(integerPart) + atof(nmeaPos)/60.;
+    if(quadrant=='W' || quadrant=='S')
+      v= -v;
+  }
+  return v;
 }
