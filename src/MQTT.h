@@ -16,6 +16,13 @@
 #if !defined(MQTT_H)
 #define MQTT_H
 
-void publish(char *payload);
+
+int mqtt_Connect();
+int mqtt_Subscribe(const char * sub_topic);
+int mqtt_Unsubscribe(const char * sub_topic);
+void mqtt_Close_Connection();
+
+
+void publish(char *payload, const char * topic);
 
 #endif

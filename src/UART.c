@@ -27,121 +27,195 @@
 #include "UART.h"
 
 
+#define LOGGING (false)
+
+bool get_time = false;
 
 
-int get_GPS_data(char *serial_port, int baud_rate, char *payload)
+
+int get_Lat(int fd, char *payload)
 {
-	int fd = 0;
+	if(payload == NULL)
+	{
+		printf("Payload varaible passed if NULL\n\r");
+		return -1;
+	}
+
+	if(fd < 0)
+	{
+		printf("File descriptor passed is not valid\n\r");
+		return -1;
+	}
+
+	float lat = 0;
+	char *gps_data[20];
+	get_GPS_data(fd,gps_data);
+
+	#if LOGGING
+		printf("\n\n\rRaw Latitude : %s, Direction : %c",*(gps_data+2), *gps_data[3]);
+	#endif
+
+	lat = GpsToDecimalDegrees(*(gps_data+2), *gps_data[3]);
+	snprintf(payload,15,"%f",lat);
+	
+	return 1;
+}
+
+
+
+
+int get_Long(int fd, char *payload)
+{
+	if(payload == NULL)
+	{
+		printf("Payload varaible passed if NULL\n\r");
+		return -1;
+	}
+
+	if(fd < 0)
+	{
+		printf("File descriptor passed is not valid\n\r");
+		return -1;
+	}
+
+	float lon = 0;
+	char *gps_data[20];
+	get_GPS_data(fd,gps_data);
+
+	#if LOGGING
+		printf("\n\n\rRaw Longitude : %s, Direction : %c",*(gps_data+4), *gps_data[5]);
+	#endif
+
+	lon = GpsToDecimalDegrees(*(gps_data+4), *gps_data[5]);
+	snprintf(payload,15,"%f",lon);
+	
+	return 1;
+}
+
+
+
+int get_Satellites(int fd, char *payload)
+{
+	if(payload == NULL)
+	{
+		printf("Payload varaible passed if NULL\n\r");
+		return -1;
+	}
+
+	if(fd < 0)
+	{
+		printf("File descriptor passed is not valid\n\r");
+		return -1;
+	}
+
+	char *gps_data[20];
+	get_GPS_data(fd,gps_data);
+
+	#if LOGGING
+		printf("\n\n\rRaw Number of Satellites : %s",*gps_data[7]);
+	#endif
+
+	strcpy(payload, gps_data[7]);
+	
+	return 1;
+}
+
+
+
+
+
+int print_time_UTC(int fd, char *payload)
+{
+
+	if(payload == NULL)
+	{
+		printf("Payload varaible passed if NULL\n\r");
+		return -1;
+	}
+
+	if(fd < 0)
+	{
+		printf("File descriptor passed is not valid\n\r");
+		return -1;
+	}
+	get_time = true;
+
+	char *gps_data[20];
+	get_GPS_data(fd,gps_data);
+	get_time = false;
+
+	return 1;
+}
+
+
+
+
+
+
+
+int get_GPS_data(int fd, char **field)
+{
 	char buffer[255];
 	int nbytes = 0;
 	int i =0;
-	char *field[20];
 	bool gps_signal_found = false;
-  	//float lat =0.0,lon=0.0,speed = 0;
-	float lat = 0;
-
-
-	if(baud_rate != 9600)
-	{
-		printf("Baud rate not supported\n\r");
-		return 1;
-	}
-
-	//Opening GPS port
-	if ( (fd = OpenGPSPort(serial_port, baud_rate)) < 0)
-	{
-		printf("Cannot open GPS port\r\n");
-		return 1;
-	}
 
 	do 
   	{
 		if ((nbytes = read(fd, &buffer, sizeof(buffer))) < 0) 
     	{
 			perror("Read");
-			goto close_port;
+			return -1;
 		} 
     	else 
    	 	{
-			if (nbytes == 0) 
-      		{
-				printf("No communication from GPS module, waiting for some time and trying again\r\n");
-				sleep(1);
-			} 
+		if (nbytes == 0) 
+		{
+			printf("No communication from GPS module, waiting for some time and trying again\r\n");
+			sleep(1);
+		} 
       	else 
       	{
-        //printf("RAW Data: %s\r\n", buffer);
-				buffer[nbytes - 1] = '\0';
+			#if LOGGING
+				printf("\nRAW Data : %s\r\n", buffer);
+			#endif
+			buffer[nbytes - 1] = '\0';
 
-        //Checking talker ID
-        //Reference : https://cdn.sparkfun.com/assets/0/b/0/f/7/u-blox8-M8_ReceiverDescrProtSpec__UBX-13003221__Public.pdf
-        //Page 104
-        if ((strncmp(buffer, "$GP", 3) == 0) | (strncmp(buffer, "$GN", 3) == 0)) 
-          {
-            if (strncmp(&buffer[3], "GGA", 3) == 0) 
-            {
-              printf("RAW Data: %s\r\n", buffer);
-              i = parse_comma_delimited_str(buffer, field, 20);
-              
-			  lat = GpsToDecimalDegrees(field[2],*field[3]);
-//              lon = GpsToDecimalDegrees(field[4],*field[5]);
-				i = (i/1);
-    
+			//Checking talker ID
+			//Reference : https://cdn.sparkfun.com/assets/0/b/0/f/7/u-blox8-M8_ReceiverDescrProtSpec__UBX-13003221__Public.pdf
+			//Page 104
+			if ((strncmp(buffer, "$GP", 3) == 0) | (strncmp(buffer, "$GN", 3) == 0)) 
+			{
 
-            //   printf("UTC Time  :%s\r\n",field[1]);
-            //   printf("Latitude  :%f\r\n",lat);
-            //   printf("Longitude :%f\r\n",lon);
-            //   printf("Altitude  :%sm\r\n",field[9]);
-            //   printf("Satellites:%s\r\n",field[7]);
-				//payload =  field[2];
+				if (strncmp(&buffer[3], "GGA", 3) == 0) 
+				{
+					#if LOGGING
+						printf("\nRAW Data (GGA): %s\r\n", buffer);
+					#endif
+					i = parse_comma_delimited_str(buffer, field, 20);
 
-				//strncpy(payload,field[2],10);
-				snprintf(payload,15,"%f",lat);
-				gps_signal_found = true;
-            }
-            // if (strncmp(&buffer[3], "RMC", 3) == 0) 
-            // {
-            //   i = parse_comma_delimited_str(buffer, field, 20);
-            //   convert_time(field[9],field[1]);
-            // }
-          }
+					//Not enough data
+					if(i<7)
+						continue;
+
+					gps_signal_found = true;
+				}
+
+
+				if (strncmp(&buffer[3], "RMC", 3) == 0 && get_time) 
+				{
+					#if LOGGING
+						printf("\nRAW Data (RMC): %s\r\n", buffer);
+					#endif
+					i = parse_comma_delimited_str(buffer, field, 20);
+					convert_time(field[9],field[1]);
+				}
 			}
+		}
 		}
 	}while(!gps_signal_found);
 
-
-  	close_port:
-	if (close(fd) < 0) 
-  	{
-		perror("Close");
-		return 1;
-	}
-	return 0;
-}
-
-
-
-
-int hexchar2int(char c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
-    if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
-    return -1;
-}
-
-int hex2int(char *c)
-{
-	int value;
-
-	value = hexchar2int(c[0]);
-	value = value << 4;
-	value += hexchar2int(c[1]);
-
-	return value;
+	return 1;
 }
 
 
@@ -172,8 +246,11 @@ void convert_time(char *date, char *time)
 	//int ret;
 
 
-	if ((strlen(date) != 6) | (strlen(time) != 9)) {
-		printf("No date or time fix. Exiting\r\n");
+	if ((strlen(date) != 6) | (strlen(time) != 9)) 
+	{
+		#if LOGGING
+			printf("No date or time fix. Exiting\r\n");
+		#endif
 		//return 1;
 	}
 
@@ -211,26 +288,42 @@ void convert_time(char *date, char *time)
 }
 
 
+float GpsToDecimalDegrees(const char* nmeaPos, char quadrant)
+{
+  float v= 0;
+  if(strlen(nmeaPos)>5)
+  {
+    char integerPart[3+1];
+    int digitCount= (nmeaPos[4]=='.' ? 2 : 3);
+    memcpy(integerPart, nmeaPos, digitCount);
+    integerPart[digitCount]= 0;
+    nmeaPos+= digitCount;
+    v= atoi(integerPart) + atof(nmeaPos)/60.;
+    if(quadrant=='W' || quadrant=='S')
+      v= -v;
+  }
+  return v;
+}
 
 
 
 int OpenGPSPort(const char *devname, int baud_rate)
 {
 
-  if(baud_rate != 9600)
-  {
-    printf("\n\rBaud rate not supported");
-    return -1;
-  }
+	if(baud_rate != 9600)
+	{
+		printf("\n\rBaud rate not supported");
+		return -1;
+	}
 
-  //File descriptor
+  	//File descriptor
 	int fd;
 
-  //Serial port strucutre
+  	//Serial port strucutre
 	struct termios options;
 
 	if ((fd = open(devname, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) 
-  {
+  	{
 		perror("Open");
 		return -1;
 	}
@@ -242,13 +335,13 @@ int OpenGPSPort(const char *devname, int baud_rate)
 	tcgetattr(fd, &options);
 
 
-  //Current supported baudrate
-  if (baud_rate == 9600)
-  {
-    	// Set input and output baud rates
-      cfsetispeed(&options, B9600);
-      cfsetospeed(&options, B9600);
-  }
+	//Current supported baudrate
+	if (baud_rate == 9600)
+	{
+		// Set input and output baud rates
+		cfsetispeed(&options, B9600);
+		cfsetospeed(&options, B9600);
+	}
 
 
 	// Set input modes
@@ -269,19 +362,12 @@ int OpenGPSPort(const char *devname, int baud_rate)
 }
 
 
-float GpsToDecimalDegrees(const char* nmeaPos, char quadrant)
+int CloseGPSPort(int fd)
 {
-  float v= 0;
-  if(strlen(nmeaPos)>5)
-  {
-    char integerPart[3+1];
-    int digitCount= (nmeaPos[4]=='.' ? 2 : 3);
-    memcpy(integerPart, nmeaPos, digitCount);
-    integerPart[digitCount]= 0;
-    nmeaPos+= digitCount;
-    v= atoi(integerPart) + atof(nmeaPos)/60.;
-    if(quadrant=='W' || quadrant=='S')
-      v= -v;
-  }
-  return v;
+	if (close(fd) < 0) 
+  	{
+		perror("Close");
+		return -1;
+	}
+	return 1;
 }

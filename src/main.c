@@ -24,11 +24,16 @@
 #include <stdlib.h>
 
 
+
+
+
 int main(int argc, char **argv)
 {
     int baud_rate = 0;
     char *p;
-    char payload[50];
+    char payload[50] = "NO DATA";
+    int fd = 0;
+    const char* topic = "Dhiraj/Level1";
 
     if(argc != 3)
     {
@@ -40,12 +45,38 @@ int main(int argc, char **argv)
 
     //Converting command line argument to integer
     baud_rate = strtol(argv[2], &p, 10);
+    
+    //Opening GPS port
+	if ( (fd = OpenGPSPort(argv[1], baud_rate)) < 0)
+	{
+		printf("Cannot open GPS port\r\n");
+		return 1;
+	}
 
 
+    mqtt_Connect();
+
+
+    //Super loop
     while(1)
     {
-        get_GPS_data(argv[1], baud_rate, payload);
-        publish(payload);
+        //get_GPS_data(fd, payload);
+        if(get_Lat(fd, payload) < 0)
+        {
+            printf("Cannot get data from sensor\n\r!");
+            continue;
+        }
+        printf("PAYLOAD Being Sent: %s\n\r", payload);
+        publish(payload, topic);
+    }
+
+    mqtt_Close_Connection();
+
+    //Closing GPS port
+    if (CloseGPSPort(fd) < 0)
+    {
+        printf("Cannot close GPS port");
+        return 1;
     }
 
 
