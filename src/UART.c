@@ -27,12 +27,28 @@
 #include "UART.h"
 
 
+
+static int parse_comma_delimited_str(char *string, char **fields, int max_fields);
+static void convert_time(char *date, char *time);
+static float GpsToDecimalDegrees(const char* nmeaPos, char quadrant);
+static int get_GPS_data(int fd, char **field);
+
+
 #define LOGGING (false)
+
+
 
 bool get_time = false;
 
 
-
+/*
+  Name         : get_Lat(int fd, char *payload)
+  Descrirption : This function reads values from GPS sensor and return 
+				 latitude value to the caller.
+  Arguments    : fd      - file descriptor of the opened file(port to which GPS is connected)
+                 payload - pointer to char string to be written.
+  Returns      : int - Value showing if the 
+*/
 int get_Lat(int fd, char *payload)
 {
 	if(payload == NULL)
@@ -56,7 +72,7 @@ int get_Lat(int fd, char *payload)
 	#endif
 
 	lat = GpsToDecimalDegrees(*(gps_data+2), *gps_data[3]);
-	snprintf(payload,15,"%f",lat);
+	snprintf(payload,30,"Latitude : %f",lat);
 	
 	return 1;
 }
@@ -87,10 +103,44 @@ int get_Long(int fd, char *payload)
 	#endif
 
 	lon = GpsToDecimalDegrees(*(gps_data+4), *gps_data[5]);
-	snprintf(payload,15,"%f",lon);
+	snprintf(payload,30,"Longitude : %f",lon);
 	
 	return 1;
 }
+
+
+
+
+int get_Lat_Long(int fd, char *payload)
+{
+	if(payload == NULL)
+	{
+		printf("Payload varaible passed if NULL\n\r");
+		return -1;
+	}
+
+	if(fd < 0)
+	{
+		printf("File descriptor passed is not valid\n\r");
+		return -1;
+	}
+	float lon = 0, lat=0;
+	char *gps_data[20];
+	char data[30];
+	get_GPS_data(fd,gps_data);
+
+
+	//Converting Latitude and Longitude to actual values
+	lat = GpsToDecimalDegrees(*(gps_data+2), *gps_data[3]);
+	lon = GpsToDecimalDegrees(*(gps_data+4), *gps_data[5]);
+
+	snprintf(payload,30,"Latitude : %f,",lat);
+	snprintf(data,30,"Longitude : %f",lon);
+	strncat(payload,data, 30);
+
+	return 1;
+}
+
 
 
 
@@ -115,7 +165,7 @@ int get_Satellites(int fd, char *payload)
 		printf("\n\n\rRaw Number of Satellites : %s",*gps_data[7]);
 	#endif
 
-	strcpy(payload, gps_data[7]);
+	snprintf(payload, 30,"Satellite : %s", gps_data[7]);
 	
 	return 1;
 }
@@ -153,7 +203,7 @@ int print_time_UTC(int fd, char *payload)
 
 
 
-int get_GPS_data(int fd, char **field)
+static int get_GPS_data(int fd, char **field)
 {
 	char buffer[255];
 	int nbytes = 0;
@@ -221,7 +271,7 @@ int get_GPS_data(int fd, char **field)
 
 
 
-int parse_comma_delimited_str(char *string, char **fields, int max_fields)
+static int parse_comma_delimited_str(char *string, char **fields, int max_fields)
 {
 	int i = 0;
 	fields[i++] = string;
@@ -237,7 +287,7 @@ int parse_comma_delimited_str(char *string, char **fields, int max_fields)
 
 
 
-void convert_time(char *date, char *time)
+static void convert_time(char *date, char *time)
 {
 	//struct timespec ts;
 	struct tm gpstime;
@@ -288,7 +338,9 @@ void convert_time(char *date, char *time)
 }
 
 
-float GpsToDecimalDegrees(const char* nmeaPos, char quadrant)
+
+
+static float GpsToDecimalDegrees(const char* nmeaPos, char quadrant)
 {
   float v= 0;
   if(strlen(nmeaPos)>5)

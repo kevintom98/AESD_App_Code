@@ -1,6 +1,6 @@
 INCLUDE_DIRS = 
 LIB_DIRS = -lpaho-mqtt3cs -lpaho-mqtt3a -lpaho-mqtt3as -lpaho-mqtt3c
-CFLAGS = -Wall -Werror 
+CFLAGS = -Wall
 CC=gcc
 TARGET = ClientApp
 

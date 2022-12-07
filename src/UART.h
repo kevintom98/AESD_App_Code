@@ -20,21 +20,20 @@
 
 
 //Function porototypes
-
-int get_GPS_data(int fd, char **field);
+//int get_GPS_data(int fd, char **field);
 int get_Lat(int fd, char *payload);
 int get_Satellites(int fd, char *payload);
 int get_Long(int fd, char *payload);
-int get_time_UTC(int fd, char *payload);
+int get_Lat_Long(int fd, char *payload);
+int print_time_UTC(int fd, char *payload);
 
 
 
-int parse_comma_delimited_str(char *string, char **fields, int max_fields);
-int debug_print_fields(int numfields, char **fields);
+//int parse_comma_delimited_str(char *string, char **fields, int max_fields);
 int OpenGPSPort(const char *devname, int baud_rate);
 int CloseGPSPort(int fd);
-void convert_time(char *date, char *time);
-float GpsToDecimalDegrees(const char* nmeaPos, char quadrant);
+//void convert_time(char *date, char *time);
+//float GpsToDecimalDegrees(const char* nmeaPos, char quadrant);
 
 
 #endif

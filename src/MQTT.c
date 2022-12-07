@@ -1,4 +1,12 @@
 /*
+* File name   : MQTT.c
+* Created     : 04-Dec-2022
+* Author      : Dhiraj Bennadi
+* Edited By   : Kevin Tom on 5th Dec 2022
+* 
+*
+*
+*--------------------------------------------------------------------------
 * Copyright 2021 HiveMQ GmbH
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +33,9 @@
 #define LOGGING (false)
 
 
+//Global variable storing all necessary MQTT Client parameters
+MQTTClient client;
+
 
 int messageArrived(void *context, char *topicName, int topicLen, MQTTClient_message *message) 
 {
@@ -32,71 +43,8 @@ int messageArrived(void *context, char *topicName, int topicLen, MQTTClient_mess
     return 1;
 }
 
-// int main(void) 
-// {
-//     int rc = 1; // return code
-//     int qos = 1;
-//     int retained = 0;
-//     MQTTClient client;
-//     // the serverURI has to be in the format "protocol://name:port", in this case it should be "ssl://name:8883"
-//     MQTTClient_create(&client, "ssl://b5feec6d24bf4ded89cbd15945207fb9.s2.eu.hivemq.cloud:8883", "Publisher",
-//         MQTTCLIENT_PERSISTENCE_NONE, NULL);
-
-//     // you can set optional callbacks for context, connectionLost, messageArrived and deliveryComplete
-//     int i = MQTTClient_setCallbacks(client, NULL, NULL, messageArrived, NULL);
-//     printf("callback: %d \n", i); // callback 0 signalizes a successful connection
-
-//     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-//     MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
-//     ssl_opts.enableServerCertAuth = 0;
-
-//     // declare values for ssl options, here we use only the ones necessary for TLS, but you can optionally define a lot more
-//     // look here for an example: https://github.com/eclipse/paho.mqtt.c/blob/master/src/samples/paho_c_sub.c
-//     ssl_opts.verify = 1;
-//     ssl_opts.CApath = NULL;
-//     ssl_opts.keyStore = NULL;
-//     ssl_opts.trustStore = NULL;
-//     ssl_opts.privateKey = NULL;
-//     ssl_opts.privateKeyPassword = NULL;
-//     ssl_opts.enabledCipherSuites = NULL;
-
-//     // use TLS for a secure connection, "ssl_opts" includes TLS
-//     conn_opts.ssl = &ssl_opts;
-//     conn_opts.keepAliveInterval = 10;
-//     conn_opts.cleansession = 1;
-//     // use your credentials that you created with the cluster
-//     conn_opts.username = "dhirajmqtt";
-//     conn_opts.password = "Dhiraj@2022";
-//     int j = MQTTClient_connect(client, &conn_opts);
-//     printf("is connected %d \n", j);
-
-//     // the topic where you publish to and subscribe to
-//     const char* topic = "Dhiraj/Level1";
-//     //MQTTClient_subscribe(client, topic, qos);
-//     //printf("subscribed to %s \n", topic);
-
-//     //payload the content of your message
-//     while(1)
-//     {
-//         char* payload = "Hello Dhiraj Bennadi";
-//         int payloadlen = strlen(payload);
-//         MQTTClient_deliveryToken dt;
-//         MQTTClient_publish(client, topic, payloadlen, payload, qos, retained, &dt);
-//         printf("published to %s \n", topic);
-//         sleep(1);
-//     }
-
-//     // after this time, unsubscribe, disconnect and destroy the client to terminate every process
-//     int timeout = 10000;
-//     MQTTClient_unsubscribe(client, topic);
-//     MQTTClient_disconnect(client, timeout);
-//     MQTTClient_destroy(&client);
-
-//     return rc;
-// }
 
 
-MQTTClient client;
 
 int mqtt_Connect()
 {
@@ -136,7 +84,6 @@ int mqtt_Connect()
     MQTTClient_connect(client, &conn_opts);
 
     return 1;
-
 }
 
 
@@ -174,9 +121,20 @@ void mqtt_Close_Connection()
     MQTTClient_destroy(&client);
 }
 
-
-void publish(char *payload, const char * topic)
+int publish(char *payload, const char * topic)
 {
+    if(payload == NULL)
+	{
+		printf("Payload varaible passed if NULL\n\r");
+		return -1;
+	}
+
+	if(topic == NULL)
+	{
+		printf("Topic passed is NULL\n\r");
+		return -1;
+	}
+
 
     int qos      = 1;
     int retained = 0;
@@ -184,8 +142,15 @@ void publish(char *payload, const char * topic)
 
     int payloadlen = strlen(payload);
     MQTTClient_publish(client, topic, payloadlen, payload, qos, retained, &dt);
-    printf("Published %s to topic %s \n", payload, topic);
+
+    printf("DATA PUBLISHED\n\r");
+    printf("--------------\n\r");
+    printf("DATA  : %s\n\r", payload);
+    printf("TOPIC : %s\n\n\n\r", topic);
+
     sleep(1);
+
+    return 1;
 
 }
 
