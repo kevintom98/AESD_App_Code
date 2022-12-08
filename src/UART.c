@@ -5,9 +5,10 @@
                 MS-ECEE-ESE
                 CU Boulder, CO
   Email       : keto9919@colorado.edu
-  Description : 
-  Reference   : parsing NMEA sentences
-                //https://www.beyondlogic.org/ansi-c-basic-lightweight-nmea-parser-for-gps/
+  Description : The file has all the interface APIs for getting data from serial port
+				on a linux system.
+  Reference   : Parsing NMEA sentences
+                https://www.beyondlogic.org/ansi-c-basic-lightweight-nmea-parser-for-gps/
   How to compile the script
   -------------------------
   1. Open terminal in the same directory as this file.
@@ -34,11 +35,15 @@ static float GpsToDecimalDegrees(const char* nmeaPos, char quadrant);
 static int get_GPS_data(int fd, char **field);
 
 
-#define LOGGING (false)
+
+//Make this macro true to turn on logging
+#define LOGGING 	false
+
+//Boolean to enalbe time parsing
+bool get_time=false;
 
 
 
-bool get_time = false;
 
 
 /*
@@ -47,7 +52,9 @@ bool get_time = false;
 				 latitude value to the caller.
   Arguments    : fd      - file descriptor of the opened file(port to which GPS is connected)
                  payload - pointer to char string to be written.
-  Returns      : int - Value showing if the 
+  Returns      : int - Value showing if the operation was sucessfull.
+				 +ve value - If operation is sucessfull
+				 -ve value - If operation failed
 */
 int get_Lat(int fd, char *payload)
 {
@@ -79,7 +86,16 @@ int get_Lat(int fd, char *payload)
 
 
 
-
+/*
+  Name         : get_Long(int fd, char *payload)
+  Descrirption : This function reads values from GPS sensor and return longitude 
+  				 value to the caller.
+  Arguments    : fd      - file descriptor of the opened file(port to which GPS is connected)
+                 payload - pointer to char string to be written.
+  Returns      : int - Value showing if the operation was sucessfull.
+				 +ve value - If operation is sucessfull
+				 -ve value - If operation failed
+*/
 int get_Long(int fd, char *payload)
 {
 	if(payload == NULL)
@@ -111,6 +127,19 @@ int get_Long(int fd, char *payload)
 
 
 
+
+
+
+/*
+  Name         : get_Lat_Long(int fd, char *payload)
+  Descrirption : This function reads values from GPS sensor and return longitude and latitude
+  				 value to the caller.
+  Arguments    : fd      - file descriptor of the opened file(port to which GPS is connected)
+                 payload - pointer to char string to be written.
+  Returns      : int - Value showing if the operation was sucessfull.
+				 +ve value - If operation is sucessfull
+				 -ve value - If operation failed
+*/
 int get_Lat_Long(int fd, char *payload)
 {
 	if(payload == NULL)
@@ -128,11 +157,19 @@ int get_Lat_Long(int fd, char *payload)
 	char *gps_data[20];
 	char data[30];
 	get_GPS_data(fd,gps_data);
-
+	
 
 	//Converting Latitude and Longitude to actual values
 	lat = GpsToDecimalDegrees(*(gps_data+2), *gps_data[3]);
 	lon = GpsToDecimalDegrees(*(gps_data+4), *gps_data[5]);
+
+	#if LOGGING
+		printf("\n\rFunction: get_Lat_Long()");
+		printf("\n\r------------------------");
+		printf("\n\rRaw Latitude : %s, Direction : %c",*(gps_data+2), *gps_data[3]);
+		printf("\n\rRaw Longitude : %s, Direction : %c",*(gps_data+4), *gps_data[5]);
+		printf("\n\rConverted Latitude : %d, Longitude %d",lat,lon);
+	#endif
 
 	snprintf(payload,30,"Latitude : %f,",lat);
 	snprintf(data,30,"Longitude : %f",lon);
@@ -144,6 +181,18 @@ int get_Lat_Long(int fd, char *payload)
 
 
 
+
+
+/*
+  Name         : get_Satellites(int fd, char *payload)
+  Descrirption : This function reads values from GPS sensor and retur the number of satellites
+  				 connected to the caller.
+  Arguments    : fd      - file descriptor of the opened file(port to which GPS is connected)
+                 payload - pointer to char string to be written.
+  Returns      : int - Value showing if the operation was sucessfull.
+				 +ve value - If operation is sucessfull
+				 -ve value - If operation failed
+*/
 int get_Satellites(int fd, char *payload)
 {
 	if(payload == NULL)
@@ -162,6 +211,8 @@ int get_Satellites(int fd, char *payload)
 	get_GPS_data(fd,gps_data);
 
 	#if LOGGING
+		printf("\n\rFunction: get_Satellites()");
+		printf("\n\r-------------------------");
 		printf("\n\n\rRaw Number of Satellites : %s",*gps_data[7]);
 	#endif
 
@@ -173,26 +224,24 @@ int get_Satellites(int fd, char *payload)
 
 
 
-
-int print_time_UTC(int fd, char *payload)
+/*
+  Name         : print_time_UTC(int fd)
+  Descrirption : This function prints UTC time read from the GPS sensor to the console
+  Arguments    : fd      - file descriptor of the opened file(port to which GPS is connected)
+  Returns      : int - Value showing if the operation was sucessfull.
+				 +ve value - If operation is sucessfull
+				 -ve value - If operation failed
+*/
+int print_time_UTC(int fd)
 {
-
-	if(payload == NULL)
-	{
-		printf("Payload varaible passed if NULL\n\r");
-		return -1;
-	}
-
 	if(fd < 0)
 	{
 		printf("File descriptor passed is not valid\n\r");
 		return -1;
 	}
-	get_time = true;
 
 	char *gps_data[20];
 	get_GPS_data(fd,gps_data);
-	get_time = false;
 
 	return 1;
 }

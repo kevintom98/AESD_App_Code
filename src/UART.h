@@ -25,7 +25,7 @@ int get_Lat(int fd, char *payload);
 int get_Satellites(int fd, char *payload);
 int get_Long(int fd, char *payload);
 int get_Lat_Long(int fd, char *payload);
-int print_time_UTC(int fd, char *payload);
+int print_time_UTC(int fd);
 
 
 
